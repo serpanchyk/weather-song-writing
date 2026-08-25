@@ -1,0 +1,2 @@
+# Required when OpenRouter integration is added. Set the real value in .dev.vars.
+OPENROUTER_API_KEY=
