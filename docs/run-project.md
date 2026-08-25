@@ -22,10 +22,14 @@ npm run dev
 ```
 
 - Frontend: <http://localhost:5173>
-- Worker health response: <http://localhost:8787>
+- Worker health response: <http://localhost:8787/api/v1/health>
 
 `OPENROUTER_API_KEY` is documented now for the forthcoming OpenRouter
 integration. The foundation health endpoint does not require it.
+
+The Worker accepts browser requests from `http://localhost:5173` and
+`http://127.0.0.1:5173` while `FRONTEND_ORIGIN` is unset. Set
+`FRONTEND_ORIGIN` to the deployed GitHub Pages origin before production use.
 
 Set `VITE_API_BASE_URL` in `apps/web/.env` to a deployed Worker URL when the
 frontend should call a non-local API.
@@ -51,3 +55,12 @@ will be introduced when it is needed.
 - Deploy `apps/api` with Cloudflare Wrangler.
 - Store `OPENROUTER_API_KEY` as a Cloudflare Worker secret.
 - Configure the frontend production API base URL to point at the Worker.
+- When run-history storage is provisioned, add its real binding to
+  `apps/api/wrangler.toml`:
+
+  ```toml
+  [[d1_databases]]
+  binding = "RUNS_DB"
+  database_name = "weather-song-writing"
+  database_id = "<Cloudflare D1 database ID>"
+  ```

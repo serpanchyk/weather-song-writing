@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "wrangler dev --port 8787",
     "build": "wrangler deploy --dry-run",
+    "test": "node --import tsx src/index.test.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@weather-song-writing/contracts": "0.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250320.0",
+    "@types/node": "^22.15.2",
     "typescript": "^5.8.2",
     "wrangler": "4.10.0"
   }

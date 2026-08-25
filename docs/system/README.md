@@ -43,6 +43,19 @@ The future Worker should own all external API calls and secrets:
 - compute weighted scores and return the winning result
 - save completed runs and expose previous runs to the frontend
 
+## Initial API Surface
+
+The Worker exposes a versioned JSON API at `/api/v1`:
+
+- `GET /health` for smoke testing
+- `GET /models` for the forthcoming OpenRouter catalog
+- `POST /runs` for validated generation requests
+- `GET /runs` and `GET /runs/:id` for the forthcoming global history
+
+Only the health route is active in the skeleton. The remaining routes return a
+structured `501` response; invalid run input returns a structured `400`
+validation response before the generation pipeline is added.
+
 ## Data Sources
 
 - Open-Meteo: geocoding, forecast, and archive weather data.

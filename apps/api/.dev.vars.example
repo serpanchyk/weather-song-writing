@@ -1,2 +1,4 @@
 # Required when OpenRouter integration is added. Set the real value in .dev.vars.
 OPENROUTER_API_KEY=
+# Optional in local development. Set to the deployed GitHub Pages origin in production.
+FRONTEND_ORIGIN=

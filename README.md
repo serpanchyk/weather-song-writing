@@ -63,7 +63,7 @@ blind evaluation -> scored winner persisted -> run returned to frontend.
 - Exact OpenRouter model catalog filtering, pricing metadata, and fallback
   behavior.
 - Exact D1 schema for saved runs.
-- Final request/response API schemas.
+- Detailed result payload schemas beyond the initial API skeleton.
 - CI and deployment workflow details.
 
 ## Current State
