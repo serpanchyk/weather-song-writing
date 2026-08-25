@@ -40,7 +40,8 @@ npm run test
 npm run build
 ```
 
-`npm run test` uses Node's built-in test runner until feature work adds tests.
+`npm run test` uses Node's built-in test runner with `tsx` so shared TypeScript
+tests can run without a separate compilation step.
 `npm run lint` currently delegates to TypeScript typechecking; dedicated linting
 will be introduced when it is needed.
 
