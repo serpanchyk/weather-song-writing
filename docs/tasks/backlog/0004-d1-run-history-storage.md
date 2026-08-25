@@ -17,14 +17,14 @@ run history.
 
 ## Acceptance Criteria
 
-- [ ] D1 schema stores run input, weather summary, candidate outputs, judge
+- [x] D1 schema stores run input, weather summary, candidate outputs, judge
       scores, cost estimates, response times, ranking, status, and errors.
-- [ ] Completed and partial runs can be saved.
-- [ ] Failed runs with fewer than two successful candidates can be recorded with
+- [x] Completed and partial runs can be saved.
+- [x] Failed runs with fewer than two successful candidates can be recorded with
       failed status.
-- [ ] API can list recent global runs newest-first.
-- [ ] API can fetch one run by ID.
-- [ ] Tests cover save, list, detail, partial run, and failed run behavior.
+- [x] API can list recent global runs newest-first.
+- [x] API can fetch one run by ID.
+- [x] Tests cover save, list, detail, partial run, and failed run behavior.
 
 ## Blocked By
 

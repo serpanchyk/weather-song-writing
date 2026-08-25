@@ -1,7 +1,13 @@
 import {
   validateCreateRunInput,
+  type RunHistoryPage,
   type ValidationIssue,
 } from "@weather-song-writing/contracts";
+
+import {
+  InvalidHistoryCursorError,
+  RunHistoryRepository,
+} from "./run-history.js";
 
 export interface Env {
   /** Set as a Worker secret before OpenRouter integration is enabled. */
@@ -18,6 +24,7 @@ type ErrorCode =
   | "not_found"
   | "not_implemented"
   | "origin_not_allowed"
+  | "storage_error"
   | "validation_error";
 
 interface ErrorResponse {
@@ -75,7 +82,7 @@ export async function handleRequest(
 
   if (url.pathname === `${API_PREFIX}/runs`) {
     if (request.method === "GET") {
-      return notImplemented(request, env);
+      return listRuns(request, env, url);
     }
     if (request.method === "POST") {
       return createRunPlaceholder(request, env);
@@ -85,11 +92,86 @@ export async function handleRequest(
 
   if (url.pathname.startsWith(`${API_PREFIX}/runs/`)) {
     return request.method === "GET"
-      ? notImplemented(request, env)
+      ? getRun(request, env, url.pathname.slice(`${API_PREFIX}/runs/`.length))
       : methodNotAllowed(request, env, ["GET", "OPTIONS"]);
   }
 
   return errorResponse(request, env, 404, "not_found", "Route not found.");
+}
+
+async function listRuns(
+  request: Request,
+  env: Env,
+  url: URL,
+): Promise<Response> {
+  const limitValue = url.searchParams.get("limit");
+  const limit = limitValue === null ? 20 : Number(limitValue);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return errorResponse(
+      request,
+      env,
+      400,
+      "validation_error",
+      "limit must be an integer from 1 to 100.",
+    );
+  }
+
+  try {
+    const page: RunHistoryPage = await new RunHistoryRepository(
+      env.RUNS_DB,
+    ).list(url.searchParams.get("cursor"), limit);
+    return jsonResponse(request, env, page);
+  } catch (error) {
+    return historyErrorResponse(request, env, error);
+  }
+}
+
+async function getRun(
+  request: Request,
+  env: Env,
+  encodedId: string,
+): Promise<Response> {
+  let id: string;
+  try {
+    id = decodeURIComponent(encodedId);
+  } catch {
+    return errorResponse(request, env, 404, "not_found", "Route not found.");
+  }
+  if (id.length === 0 || id.includes("/")) {
+    return errorResponse(request, env, 404, "not_found", "Route not found.");
+  }
+
+  try {
+    const run = await new RunHistoryRepository(env.RUNS_DB).getById(id);
+    return run === null
+      ? errorResponse(request, env, 404, "not_found", "Run not found.")
+      : jsonResponse(request, env, run);
+  } catch (error) {
+    return historyErrorResponse(request, env, error);
+  }
+}
+
+function historyErrorResponse(
+  request: Request,
+  env: Env,
+  error: unknown,
+): Response {
+  if (error instanceof InvalidHistoryCursorError) {
+    return errorResponse(request, env, 400, "validation_error", error.message);
+  }
+  console.error(
+    JSON.stringify({
+      event: "run_history_storage_error",
+      error: String(error),
+    }),
+  );
+  return errorResponse(
+    request,
+    env,
+    500,
+    "storage_error",
+    "Run history is temporarily unavailable.",
+  );
 }
 
 export default {

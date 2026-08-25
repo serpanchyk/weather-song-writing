@@ -62,11 +62,11 @@ blind evaluation -> scored winner persisted -> run returned to frontend.
 - Exact frontend UI layout.
 - Exact OpenRouter model catalog filtering, pricing metadata, and fallback
   behavior.
-- Exact D1 schema for saved runs.
 - Detailed result payload schemas beyond the initial API skeleton.
 - CI and deployment workflow details.
 
 ## Current State
 
-Only project structure and documentation are scaffolded. Runtime implementation,
-dependencies, CI, deployment config, and API contracts are intentionally pending.
+The shared contracts, Worker API skeleton, and D1 run-history persistence are
+implemented. OpenRouter, Open-Meteo, generation, frontend flow, CI, and
+deployment configuration are still pending.

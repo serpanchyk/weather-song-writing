@@ -55,7 +55,7 @@ will be introduced when it is needed.
 - Deploy `apps/api` with Cloudflare Wrangler.
 - Store `OPENROUTER_API_KEY` as a Cloudflare Worker secret.
 - Configure the frontend production API base URL to point at the Worker.
-- When run-history storage is provisioned, add its real binding to
+- Provision the D1 database, then add its real binding to
   `apps/api/wrangler.toml`:
 
   ```toml
@@ -64,3 +64,13 @@ will be introduced when it is needed.
   database_name = "weather-song-writing"
   database_id = "<Cloudflare D1 database ID>"
   ```
+
+- Apply the checked-in run-history migration after adding the binding:
+
+  ```bash
+  cd apps/api
+  npx wrangler d1 execute weather-song-writing --remote --file=../../infra/d1/migrations/0001_run_history.sql
+  ```
+
+  For a local Worker database, omit `--remote`. The Worker expects this binding
+  before calling either history endpoint.

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev --port 8787",
     "build": "wrangler deploy --dry-run",
-    "test": "node --import tsx src/index.test.ts",
+    "test": "node --import tsx --test src/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

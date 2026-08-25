@@ -170,6 +170,12 @@ export interface GenerationRun extends RunSummary {
   readonly errorMessage: string | null;
 }
 
+export interface RunHistoryPage {
+  readonly runs: readonly RunSummary[];
+  /** Opaque cursor for the next newest-first page, or null at the end. */
+  readonly nextCursor: string | null;
+}
+
 export type ValidationIssueCode =
   | "required"
   | "invalid_option"

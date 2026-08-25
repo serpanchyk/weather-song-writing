@@ -5,6 +5,15 @@ import { handleRequest, type Env } from "./index.js";
 
 const env = {
   OPENROUTER_API_KEY: "test-secret",
+  RUNS_DB: {
+    prepare: () => ({
+      bind: () => ({
+        all: async () => ({ results: [] }),
+        first: async () => null,
+      }),
+    }),
+    batch: async () => [],
+  } as unknown as D1Database,
 } as Env;
 
 async function dispatch(path: string, init?: RequestInit): Promise<Response> {
@@ -25,7 +34,7 @@ test("serves the versioned health endpoint", async () => {
 });
 
 test("exposes future API routes as structured placeholders", async () => {
-  for (const path of ["/api/v1/models", "/api/v1/runs", "/api/v1/runs/run-1"]) {
+  for (const path of ["/api/v1/models"]) {
     const response = await dispatch(path);
     assert.equal(response.status, 501);
     assert.deepEqual(await response.json(), {
@@ -35,6 +44,18 @@ test("exposes future API routes as structured placeholders", async () => {
       },
     });
   }
+});
+
+test("lists history and returns not found for an unknown saved run", async () => {
+  const listResponse = await dispatch("/api/v1/runs?limit=1");
+  assert.equal(listResponse.status, 200);
+  assert.deepEqual(await listResponse.json(), { runs: [], nextCursor: null });
+
+  const detailResponse = await dispatch("/api/v1/runs/missing");
+  assert.equal(detailResponse.status, 404);
+  assert.deepEqual(await detailResponse.json(), {
+    error: { code: "not_found", message: "Run not found." },
+  });
 });
 
 test("returns a structured validation error before the run placeholder", async () => {
