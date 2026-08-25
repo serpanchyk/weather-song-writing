@@ -93,6 +93,7 @@ export interface ModelCatalogEntry {
   readonly contextLength: number | null;
   readonly supportedModalities: readonly ModelModality[];
   readonly pricing: ModelPricing | null;
+  readonly pricingStatus: "available" | "missing" | "expensive";
 }
 
 export interface WeatherSummary {

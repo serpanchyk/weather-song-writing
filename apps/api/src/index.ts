@@ -8,6 +8,7 @@ import {
   InvalidHistoryCursorError,
   RunHistoryRepository,
 } from "./run-history.js";
+import { ModelCatalogError, OpenRouterModelCatalog } from "./model-catalog.js";
 
 export interface Env {
   /** Set as a Worker secret before OpenRouter integration is enabled. */
@@ -16,6 +17,8 @@ export interface Env {
   readonly FRONTEND_ORIGIN?: string;
   /** Bound when D1 run-history storage is provisioned. */
   readonly RUNS_DB: D1Database;
+  /** Test-only override; production uses the Worker global fetch. */
+  readonly fetcher?: typeof fetch;
 }
 
 type ErrorCode =
@@ -25,6 +28,7 @@ type ErrorCode =
   | "not_implemented"
   | "origin_not_allowed"
   | "storage_error"
+  | "upstream_error"
   | "validation_error";
 
 interface ErrorResponse {
@@ -76,7 +80,7 @@ export async function handleRequest(
 
   if (url.pathname === `${API_PREFIX}/models`) {
     return request.method === "GET"
-      ? notImplemented(request, env)
+      ? listModels(request, env, url)
       : methodNotAllowed(request, env, ["GET", "OPTIONS"]);
   }
 
@@ -97,6 +101,24 @@ export async function handleRequest(
   }
 
   return errorResponse(request, env, 404, "not_found", "Route not found.");
+}
+
+async function listModels(request: Request, env: Env, url: URL): Promise<Response> {
+  const includeExpensive = url.searchParams.get("includeExpensive") === "true";
+  try {
+    return jsonResponse(request, env, {
+      models: await new OpenRouterModelCatalog(env.OPENROUTER_API_KEY, env.fetcher).list({
+        search: url.searchParams.get("search") ?? undefined,
+        provider: url.searchParams.get("provider") ?? undefined,
+        includeExpensive,
+      }),
+    });
+  } catch (error) {
+    if (error instanceof ModelCatalogError) {
+      return errorResponse(request, env, 502, "upstream_error", error.message);
+    }
+    throw error;
+  }
 }
 
 async function listRuns(

@@ -14,6 +14,17 @@ const env = {
     }),
     batch: async () => [],
   } as unknown as D1Database,
+  fetcher: async () =>
+    Response.json({
+      data: [
+        {
+          id: "acme/text",
+          name: "Acme Text",
+          architecture: { modality: "text" },
+          pricing: { prompt: "0.000001", completion: "0.000002" },
+        },
+      ],
+    }),
 } as Env;
 
 async function dispatch(path: string, init?: RequestInit): Promise<Response> {
@@ -33,17 +44,22 @@ test("serves the versioned health endpoint", async () => {
   });
 });
 
-test("exposes future API routes as structured placeholders", async () => {
-  for (const path of ["/api/v1/models"]) {
-    const response = await dispatch(path);
-    assert.equal(response.status, 501);
-    assert.deepEqual(await response.json(), {
-      error: {
-        code: "not_implemented",
-        message: "This endpoint is not implemented yet.",
+test("exposes the text-capable OpenRouter model catalog", async () => {
+  const response = await dispatch("/api/v1/models?search=acme");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    models: [
+      {
+        id: "acme/text",
+        displayName: "Acme Text",
+        provider: "acme",
+        contextLength: null,
+        supportedModalities: ["text"],
+        pricing: { promptUsdPerMillionTokens: 1, completionUsdPerMillionTokens: 2 },
+        pricingStatus: "available",
       },
-    });
-  }
+    ],
+  });
 });
 
 test("lists history and returns not found for an unknown saved run", async () => {
