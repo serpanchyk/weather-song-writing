@@ -42,16 +42,43 @@ export class OpenRouterModelCatalog {
     let response: Response;
     try {
       response = await this.fetcher(OPENROUTER_MODELS_URL);
-    } catch {
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "openrouter_model_catalog_fetch_failed",
+          error: errorMessage(error),
+        }),
+      );
       throw new ModelCatalogError(
         "OpenRouter model catalog is temporarily unavailable.",
       );
     }
-    if (!response.ok)
+    if (!response.ok) {
+      console.error(
+        JSON.stringify({
+          event: "openrouter_model_catalog_response_failed",
+          status: response.status,
+          statusText: response.statusText,
+        }),
+      );
       throw new ModelCatalogError(
         "OpenRouter model catalog is temporarily unavailable.",
       );
-    const body = (await response.json()) as OpenRouterResponse;
+    }
+    let body: OpenRouterResponse;
+    try {
+      body = (await response.json()) as OpenRouterResponse;
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "openrouter_model_catalog_response_invalid",
+          error: errorMessage(error),
+        }),
+      );
+      throw new ModelCatalogError(
+        "OpenRouter returned an invalid model catalog.",
+      );
+    }
     if (!Array.isArray(body.data))
       throw new ModelCatalogError(
         "OpenRouter returned an invalid model catalog.",
@@ -146,4 +173,8 @@ function dollarsPerTokenToMillion(value: unknown): number | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
