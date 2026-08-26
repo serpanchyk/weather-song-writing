@@ -113,6 +113,8 @@ the project is still scaffold-only or dependencies are missing, say that clearly
 - Keep generated changes scoped to the requested task.
 - Commit after every completed agent-made change unless the user explicitly asks
   not to commit or the change is intentionally exploratory.
+- Run Prettier before every commit and include any required formatting updates
+  in that commit.
 - Keep commits scoped. Do not include unrelated IDE files, local environment
   files, or user work outside the requested change.
 - Before reporting completion, check `git status --short` and distinguish your
