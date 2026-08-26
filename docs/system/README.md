@@ -15,7 +15,7 @@ GitHub Pages frontend
 
 ## Frontend Responsibility
 
-The future frontend should handle user input and result display:
+The static frontend handles user input and result display:
 
 - city search
 - date/time selection
@@ -53,11 +53,9 @@ The Worker exposes a versioned JSON API at `/api/v1`:
 - `GET /runs` for cursor-paginated global history and `GET /runs/:id` for a
   saved run detail
 
-The health, model catalog, and history read routes are active. Run creation
-remains a structured `501` placeholder; invalid run input returns a structured
-`400` validation response before the generation pipeline is added. Open-Meteo
-resolution is implemented as a Worker adapter and will be invoked by run
-creation once the generation pipeline is added.
+All listed routes are active. Run creation validates input, resolves weather,
+generates candidate outputs, evaluates them blindly, ranks them, and persists
+the resulting run. Invalid input returns a structured `400` validation response.
 
 ## Data Sources
 

@@ -101,6 +101,8 @@ help distinguish outputs with similar judge scores.
 - The UI should let users browse and reopen previous runs from one global
   history.
 - Runs do not need to be separated by user account.
+- The frontend should provide a recent-runs panel from the generator and a
+  paginated history view for older saved runs.
 
 ## Failure Handling
 
