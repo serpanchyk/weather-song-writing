@@ -1,0 +1,149 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { handleRequest, type Env } from "./index.js";
+
+const env = {
+  OPENROUTER_API_KEY: "test-secret",
+  RUNS_DB: {
+    prepare: () => ({
+      bind: () => ({
+        all: async () => ({ results: [] }),
+        first: async () => null,
+      }),
+    }),
+    batch: async () => [],
+  } as unknown as D1Database,
+  fetcher: async () =>
+    Response.json({
+      data: [
+        {
+          id: "acme/text",
+          name: "Acme Text",
+          architecture: { modality: "text" },
+          pricing: { prompt: "0.000001", completion: "0.000002" },
+        },
+      ],
+    }),
+} as Env;
+
+async function dispatch(path: string, init?: RequestInit): Promise<Response> {
+  return handleRequest(
+    new Request(`https://api.example.test${path}`, init),
+    env,
+  );
+}
+
+test("serves the versioned health endpoint", async () => {
+  const response = await dispatch("/api/v1/health");
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    status: "ok",
+    service: "weather-song-writing-api",
+  });
+});
+
+test("exposes the text-capable OpenRouter model catalog", async () => {
+  const response = await dispatch("/api/v1/models?search=acme");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    models: [
+      {
+        id: "acme/text",
+        displayName: "Acme Text",
+        provider: "acme",
+        contextLength: null,
+        supportedModalities: ["text"],
+        pricing: { promptUsdPerMillionTokens: 1, completionUsdPerMillionTokens: 2 },
+        pricingStatus: "available",
+      },
+    ],
+  });
+});
+
+test("lists history and returns not found for an unknown saved run", async () => {
+  const listResponse = await dispatch("/api/v1/runs?limit=1");
+  assert.equal(listResponse.status, 200);
+  assert.deepEqual(await listResponse.json(), { runs: [], nextCursor: null });
+
+  const detailResponse = await dispatch("/api/v1/runs/missing");
+  assert.equal(detailResponse.status, 404);
+  assert.deepEqual(await detailResponse.json(), {
+    error: { code: "not_found", message: "Run not found." },
+  });
+});
+
+test("returns a structured validation error before the run placeholder", async () => {
+  const response = await dispatch("/api/v1/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ candidateModelIds: ["only-one"] }),
+  });
+
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as {
+    error: { code: string; issues: Array<{ field: string }> };
+  };
+  assert.equal(body.error.code, "validation_error");
+  assert.deepEqual(
+    body.error.issues.map((issue) => issue.field),
+    [
+      "location",
+      "localDateTime",
+      "genre",
+      "language",
+      "lyricsStructure",
+      "mood",
+      "candidateModelIds",
+    ],
+  );
+});
+
+test("handles malformed JSON with a structured error", async () => {
+  const response = await dispatch("/api/v1/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{",
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: "invalid_json",
+      message: "Request body must contain valid JSON.",
+    },
+  });
+});
+
+test("allows local frontend CORS requests and preflight", async () => {
+  const response = await dispatch("/api/v1/runs", {
+    method: "OPTIONS",
+    headers: { Origin: "http://localhost:5173" },
+  });
+
+  assert.equal(response.status, 204);
+  assert.equal(
+    response.headers.get("Access-Control-Allow-Origin"),
+    "http://localhost:5173",
+  );
+  assert.equal(
+    response.headers.get("Access-Control-Allow-Methods"),
+    "GET, POST, OPTIONS",
+  );
+});
+
+test("rejects origins outside the configured allow list", async () => {
+  const response = await dispatch("/api/v1/health", {
+    headers: { Origin: "https://untrusted.example" },
+  });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: "origin_not_allowed",
+      message: "This origin is not allowed to call the API.",
+    },
+  });
+  assert.equal(response.headers.has("Access-Control-Allow-Origin"), false);
+});
