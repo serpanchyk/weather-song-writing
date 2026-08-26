@@ -1,0 +1,6 @@
+# Required for the OpenRouter model catalog and lyric generation endpoints.
+# Copy this file to .dev.vars and replace the placeholder locally.
+OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
+
+# Optional locally. Production is set in wrangler.toml.
+FRONTEND_ORIGIN=http://localhost:5173
