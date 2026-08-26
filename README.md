@@ -71,4 +71,6 @@ The shared contracts, Worker API skeleton, D1 run-history persistence,
 server-side OpenRouter text-model catalog, and Open-Meteo weather resolution
 are implemented. Deterministic candidate and blind-judge prompt construction,
 generation, blind evaluation, scoring, and run persistence are also implemented.
-Frontend flow, CI, and deployment configuration are still pending.
+Frontend flow, CI, and production deployment configuration are implemented.
+The frontend deploys to GitHub Pages and the Worker deploys through GitHub
+Actions; see [the run and deployment guide](docs/run-project.md).

@@ -28,8 +28,9 @@ npm run dev
 integration. The foundation health endpoint does not require it.
 
 The Worker accepts browser requests from `http://localhost:5173` and
-`http://127.0.0.1:5173` while `FRONTEND_ORIGIN` is unset. Set
-`FRONTEND_ORIGIN` to the deployed GitHub Pages origin before production use.
+`http://127.0.0.1:5173` while `FRONTEND_ORIGIN` is unset. Local
+`OPENROUTER_API_KEY` belongs only in `apps/api/.dev.vars`; it must never be
+placed in `apps/web/.env`.
 
 Set `VITE_API_BASE_URL` in `apps/web/.env` to a deployed Worker URL when the
 frontend should call a non-local API.
@@ -49,36 +50,47 @@ tests can run without a separate compilation step.
 `npm run lint` currently delegates to TypeScript typechecking; dedicated linting
 will be introduced when it is needed.
 
-## Deployment
+## Production Deployment
 
-- Build `apps/web` as static files and publish them with GitHub Pages.
-- Deploy `apps/api` with Cloudflare Wrangler.
-- Store `OPENROUTER_API_KEY` as a Cloudflare Worker secret.
-- Configure the frontend production API base URL to point at the Worker.
-- Provision the D1 database, then add its real binding to
-  `apps/api/wrangler.toml`:
+The public frontend is deployed by GitHub Actions from `main` to
+<https://serpanchyk.github.io/weather-song-writing/>. Its build is configured
+with the Worker API URL:
 
-  ```toml
-  [[d1_databases]]
-  binding = "RUNS_DB"
-  database_name = "weather-song-writing"
-  database_id = "<Cloudflare D1 database ID>"
-  ```
+<https://weather-song-writing-api.anton-mykhalchuk-ua.workers.dev>
 
-- Apply the checked-in run-history migration after adding the binding:
+The Worker configuration includes the production D1 binding and allows the
+GitHub Pages origin. It is deployed by the same workflow after validation.
 
-  ```bash
-  cd apps/api
-  npx wrangler d1 execute weather-song-writing --remote --file=../../infra/d1/migrations/0001_run_history.sql
-  ```
+Before the first automated Worker deployment, add the following GitHub Actions
+repository secret:
 
-  For a local Worker database, omit `--remote`. The Worker expects this binding
-  before calling either history endpoint.
+- `CLOUDFLARE_API_TOKEN`: a least-privilege Cloudflare API token able to deploy
+  this Worker. Do not store the OpenRouter key in GitHub.
 
-# Run and deploy
+After the Worker exists, set the live generation key directly in Cloudflare:
 
-Install Node 20+, then run `npm ci`, `npm run dev`, `npm test`, and `npm run build`.
+```bash
+cd apps/api
+npx wrangler secret put OPENROUTER_API_KEY
+```
 
-Manual production setup (not performed by this repository): create a Cloudflare D1 database, apply `infra/d1/migrations/0001_run_history.sql` with Wrangler, add its binding as `RUNS_DB` in `apps/api/wrangler.toml`, and set `OPENROUTER_API_KEY` as a Worker secret. Set `FRONTEND_ORIGIN` to the GitHub Pages URL and `VITE_API_BASE_URL` to the deployed Worker URL. Deploy the static `apps/web/dist` directory to GitHub Pages and the Worker with Wrangler only after these values are configured.
+The production D1 database is named `weather-song-writing`. Its run-history
+migration is in `infra/d1/migrations/0001_run_history.sql` and is applied once
+during provisioning. To apply it again to another database, run:
 
-Smoke-check `GET /api/v1/health`, load the catalog, submit a two-model run, verify history reopening, and confirm browser source contains no OpenRouter key.
+```bash
+cd apps/api
+npx wrangler d1 execute weather-song-writing --remote --file=../../infra/d1/migrations/0001_run_history.sql
+```
+
+For a local Worker database, omit `--remote`. The Worker expects the `RUNS_DB`
+binding before calling either history endpoint.
+
+## Production Smoke Check
+
+1. Request `GET /api/v1/health` from the Worker URL.
+2. Open the GitHub Pages URL and confirm the model catalog loads.
+3. Submit a run with two candidate models and confirm the ranked result appears.
+4. Reopen the saved run from history.
+5. Confirm no browser source, committed file, or GitHub secret contains
+   `OPENROUTER_API_KEY`.

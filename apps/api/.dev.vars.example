@@ -1,4 +1,6 @@
-# Required when OpenRouter integration is added. Set the real value in .dev.vars.
-OPENROUTER_API_KEY=
-# Optional in local development. Set to the deployed GitHub Pages origin in production.
-FRONTEND_ORIGIN=
+# Required for the OpenRouter model catalog and lyric generation endpoints.
+# Copy this file to .dev.vars and replace the placeholder locally.
+OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
+
+# Optional locally. Production is set in wrangler.toml.
+FRONTEND_ORIGIN=http://localhost:5173
