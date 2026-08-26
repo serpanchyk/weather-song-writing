@@ -1,0 +1,13 @@
+name = "weather-song-writing-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-01"
+account_id = "d5ee06cd7c78f9a8b0da045f3ac418e6"
+
+[vars]
+FRONTEND_ORIGIN = "https://serpanchyk.github.io"
+
+[[d1_databases]]
+binding = "RUNS_DB"
+database_name = "weather-song-writing"
+database_id = "3f7ee3dc-6b9e-4a3d-9ec1-6c1f02ea1cc3"
+migrations_dir = "../../infra/d1/migrations"
