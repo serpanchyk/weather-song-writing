@@ -1,5 +1,6 @@
 import {
   validateCreateRunInput,
+  type CreateRunInput,
   type RunHistoryPage,
   type ValidationIssue,
 } from "@weather-song-writing/contracts";
@@ -239,12 +240,15 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const run = await new GenerationPipeline({
+    const pipeline = new GenerationPipeline({
       weather: new OpenMeteoWeatherResolver(env.fetcher),
       catalog: new OpenRouterModelCatalog(env.OPENROUTER_API_KEY, env.fetcher),
       chat: new OpenRouterChatClient(env.OPENROUTER_API_KEY, env.fetcher),
       history: new RunHistoryRepository(env.RUNS_DB),
-    }).create(validation.value);
+    });
+    if (request.headers.get("Accept")?.includes("text/event-stream"))
+      return streamRun(request, env, pipeline, validation.value);
+    const run = await pipeline.create(validation.value);
     return jsonResponse(request, env, run, 201);
   } catch (error) {
     if (error instanceof WeatherValidationError) {
@@ -273,6 +277,41 @@ async function createRun(request: Request, env: Env): Promise<Response> {
       "Generation could not be saved.",
     );
   }
+}
+
+function streamRun(
+  request: Request,
+  env: Env,
+  pipeline: GenerationPipeline,
+  input: CreateRunInput,
+): Response {
+  const stream = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = stream.writable.getWriter();
+  const encoder = new TextEncoder();
+  const send = async (event: string, body: unknown) => {
+    await writer.write(
+      encoder.encode(`event: ${event}\ndata: ${JSON.stringify(body)}\n\n`),
+    );
+  };
+  void (async () => {
+    try {
+      const run = await pipeline.create(
+        input,
+        (progress) => void send("progress", progress),
+      );
+      await send("complete", run);
+    } catch (error) {
+      await send("error", {
+        message: error instanceof Error ? error.message : "Generation failed.",
+      });
+    } finally {
+      await writer.close();
+    }
+  })();
+  const headers = corsHeaders(request, env);
+  headers.set("Content-Type", "text/event-stream");
+  headers.set("Cache-Control", "no-cache");
+  return new Response(stream.readable, { status: 201, headers });
 }
 
 function methodNotAllowed(

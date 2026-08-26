@@ -208,19 +208,31 @@ async function submit(event: SubmitEvent, form: HTMLFormElement) {
   const button = form.querySelector<HTMLButtonElement>("[type=submit]")!;
   button.disabled = true;
   button.innerHTML =
-    '<span class="spinner"></span><span>Generating and judging anonymously…</span>';
+    '<span class="spinner"></span><span>Starting comparison…</span>';
+  const progress = document.createElement("div");
+  progress.className = "run-progress";
+  progress.setAttribute("aria-live", "polite");
+  button.insertAdjacentElement("afterend", progress);
+  progress.innerHTML = "<p>Starting your comparison…</p>";
   try {
     const response = await fetch(`${base}/api/v1/runs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
       body: JSON.stringify(toCreateRunInput(values)),
     });
-    const result = (await response.json()) as
-      GenerationRun | { error?: { message?: string } };
-    if (!response.ok || !("candidateOutputs" in result))
-      throw new Error(
-        "error" in result ? result.error?.message : "Generation failed.",
+    if (!response.ok || response.body === null)
+      throw new Error("Generation could not start.");
+    const result = await readRunStream(response.body, (message) => {
+      progress.insertAdjacentHTML(
+        "beforeend",
+        `<p>${escape(progressMessage(message))}</p>`,
       );
+      button.innerHTML =
+        '<span class="spinner"></span><span>Comparison in progress…</span>';
+    });
     activeRun = result;
     page = "results";
     void loadHistory();
@@ -231,6 +243,70 @@ async function submit(event: SubmitEvent, form: HTMLFormElement) {
     button.disabled = false;
     button.innerHTML =
       '<span>Generate & compare</span><span aria-hidden="true">→</span>';
+  }
+}
+
+type RunStreamMessage =
+  | { stage: "weather" | "catalog" | "ranking" | "saving" }
+  | {
+      stage: "candidate_started" | "candidate_finished";
+      modelId: string;
+      succeeded?: boolean;
+    }
+  | {
+      stage: "judge";
+      judgeModelId: string;
+      candidateModelIds: readonly string[];
+    };
+
+async function readRunStream(
+  body: ReadableStream<Uint8Array>,
+  onProgress: (message: RunStreamMessage) => void,
+): Promise<GenerationRun> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const chunk = await reader.read();
+    buffer += decoder.decode(chunk.value ?? new Uint8Array(), {
+      stream: !chunk.done,
+    });
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+    for (const event of events) {
+      const type = event.match(/^event: (.+)$/m)?.[1];
+      const data = event.match(/^data: (.+)$/m)?.[1];
+      if (!type || !data) continue;
+      const value = JSON.parse(data) as
+        GenerationRun | RunStreamMessage | { message: string };
+      if (type === "progress") onProgress(value as RunStreamMessage);
+      if (type === "complete") return value as GenerationRun;
+      if (type === "error")
+        throw new Error((value as { message: string }).message);
+    }
+    if (chunk.done) break;
+  }
+  throw new Error("Generation stream ended before a result was returned.");
+}
+
+function progressMessage(message: RunStreamMessage): string {
+  switch (message.stage) {
+    case "weather":
+      return "Resolving weather for your selected moment…";
+    case "catalog":
+      return "Checking model pricing for instant cost estimates…";
+    case "candidate_started":
+      return `${message.modelId} is writing lyrics…`;
+    case "candidate_finished":
+      return message.succeeded
+        ? `${message.modelId} finished; its cost estimate is ready.`
+        : `${message.modelId} did not return lyrics and will be excluded from ranking.`;
+    case "judge":
+      return `${message.judgeModelId} is evaluating creativity, lyric quality, instruction following, and weather relevance for ${message.candidateModelIds.join(", ")}.`;
+    case "ranking":
+      return "Combining quality, cost, and response-time scores…";
+    case "saving":
+      return "Saving this comparison to the global history…";
   }
 }
 async function openRun(id: string) {

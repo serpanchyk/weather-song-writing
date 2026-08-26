@@ -50,8 +50,15 @@ function renderOutput(
   ranking: CandidateRanking | undefined,
   evaluation: CandidateJudgeEvaluation | undefined,
 ): string {
-  const label = ranking?.rank ? `#${ranking.rank}` : statusLabel(output.status);
-  return `<details class="output-card" ${ranking?.rank === 1 ? "open" : ""}><summary><span class="rank-badge">${escape(label)}</span><span class="output-name"><strong>${escape(output.modelId)}</strong><small>${escape(statusLabel(output.status))}</small></span><span class="output-metrics">${ranking ? `<small>Quality <b>${ranking.qualityScore.toFixed(2)}</b></small><small>Value <b>${ranking.overallValue?.toFixed(2) ?? "—"}</b></small>` : "<small>Not ranked</small>"}</span><span class="chevron" aria-hidden="true">⌄</span></summary><div class="output-body">${output.lyrics ? `<pre>${escape(output.lyrics)}</pre>` : `<p class="inline-error">${escape(output.errorMessage ?? "No Lyrics returned.")}</p>`}<div class="metric-grid"><div><span>Quality</span><strong>${ranking?.qualityScore.toFixed(2) ?? "—"}</strong></div><div><span>Estimated cost</span><strong>${currency(output.estimatedCostUsd)}</strong></div><div><span>Response time</span><strong>${output.responseTimeMs === null ? "—" : `${output.responseTimeMs} ms`}</strong></div><div><span>Overall value</span><strong>${ranking?.overallValue?.toFixed(2) ?? "—"}</strong></div></div>${evaluation ? renderRubric(evaluation) : ""}</div></details>`;
+  const visualState = ranking?.rank
+    ? "ranked"
+    : output.status === "succeeded"
+      ? "generated"
+      : "error";
+  const status = ranking?.rank
+    ? `Ranked #${ranking.rank}`
+    : statusLabel(output.status);
+  return `<details class="output-card output-card--${visualState}" ${ranking?.rank === 1 ? "open" : ""}><summary><span class="output-name"><strong>${escape(output.modelId)}</strong><small>${escape(status)}</small></span><span class="output-metrics">${ranking ? `<small>Quality <b>${ranking.qualityScore.toFixed(2)}</b></small><small>Value <b>${ranking.overallValue?.toFixed(2) ?? "—"}</b></small>` : "<small>Not ranked</small>"}</span><span class="chevron" aria-hidden="true">⌄</span></summary><div class="output-body">${output.lyrics ? `<pre>${escape(output.lyrics)}</pre>` : `<p class="inline-error">${escape(output.errorMessage ?? "No Lyrics returned.")}</p>`}<div class="metric-grid"><div><span>Quality</span><strong>${ranking?.qualityScore.toFixed(2) ?? "—"}</strong></div><div><span>Estimated cost</span><strong>${currency(output.estimatedCostUsd)}</strong></div><div><span>Response time</span><strong>${output.responseTimeMs === null ? "—" : `${output.responseTimeMs} ms`}</strong></div><div><span>Overall value</span><strong>${ranking?.overallValue?.toFixed(2) ?? "—"}</strong></div></div>${evaluation ? renderRubric(evaluation) : ""}</div></details>`;
 }
 
 function renderRubric(evaluation: CandidateJudgeEvaluation): string {

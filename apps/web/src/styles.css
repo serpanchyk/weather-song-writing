@@ -413,6 +413,20 @@ nav {
   font-size: 0.71rem;
   line-height: 1.5;
 }
+.run-progress {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: #4b6e91;
+  font-size: 0.74rem;
+}
+.run-progress p {
+  margin: 0;
+  padding: 8px 10px;
+  background: #f1f8ff;
+  border-left: 3px solid #5a9bda;
+  border-radius: 6px;
+}
 .recent-card,
 .history-card {
   padding: 25px;
@@ -600,16 +614,17 @@ nav {
 .output-card summary::-webkit-details-marker {
   display: none;
 }
-.rank-badge {
-  display: grid;
-  place-items: center;
-  width: 31px;
-  height: 31px;
-  border-radius: 9px;
-  background: #e9f4ff;
-  color: #3479c9;
-  font-size: 0.75rem;
-  font-weight: 800;
+.output-card--generated {
+  border-color: #9ecaf3;
+  background: #f6fbff;
+}
+.output-card--error {
+  border-color: #edb9bd;
+  background: #fff8f8;
+}
+.output-card--ranked {
+  border-color: #9ccfb1;
+  background: #f5fcf7;
 }
 .output-name {
   display: grid;
@@ -622,6 +637,15 @@ nav {
 .output-name small {
   color: #7890a8;
   font-size: 0.71rem;
+}
+.output-card--generated .output-name small {
+  color: #2876c8;
+}
+.output-card--error .output-name small {
+  color: #b34249;
+}
+.output-card--ranked .output-name small {
+  color: #287348;
 }
 .output-metrics {
   display: flex;

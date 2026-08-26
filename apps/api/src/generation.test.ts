@@ -74,6 +74,24 @@ test("persists and ranks a completed generated run", async () => {
   assert.equal(saved[0], run);
 });
 
+test("reports live stages without exposing candidate identities to the judge", async () => {
+  const saved: unknown[] = [];
+  const progress: unknown[] = [];
+  await pipeline(client(), saved).create(input, (stage) =>
+    progress.push(stage),
+  );
+
+  assert.deepEqual(progress[0], { stage: "weather" });
+  assert.deepEqual(progress[1], { stage: "catalog" });
+  assert.deepEqual(progress.at(-3), {
+    stage: "judge",
+    judgeModelId: "acme/judge",
+    candidateModelIds: ["acme/a", "acme/b", "acme/c"],
+  });
+  assert.deepEqual(progress.at(-2), { stage: "ranking" });
+  assert.deepEqual(progress.at(-1), { stage: "saving" });
+});
+
 test("persists a partial run and excludes a failed candidate from ranking", async () => {
   const saved: unknown[] = [];
   const run = await pipeline(client(new Set(["acme/c"])), saved).create(input);

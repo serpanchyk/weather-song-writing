@@ -42,6 +42,23 @@ export interface CompletionClient {
   ): Promise<CompletionResult>;
 }
 
+export type GenerationProgress =
+  | { readonly stage: "weather" }
+  | { readonly stage: "catalog" }
+  | { readonly stage: "candidate_started"; readonly modelId: string }
+  | {
+      readonly stage: "candidate_finished";
+      readonly modelId: string;
+      readonly succeeded: boolean;
+    }
+  | {
+      readonly stage: "judge";
+      readonly judgeModelId: string;
+      readonly candidateModelIds: readonly string[];
+    }
+  | { readonly stage: "ranking" }
+  | { readonly stage: "saving" };
+
 export class OpenRouterChatClient implements CompletionClient {
   constructor(
     private readonly apiKey: string,
@@ -109,15 +126,26 @@ export class GenerationPipeline {
     },
   ) {}
 
-  async create(input: CreateRunInput): Promise<GenerationRun> {
+  async create(
+    input: CreateRunInput,
+    onProgress?: (progress: GenerationProgress) => void,
+  ): Promise<GenerationRun> {
+    onProgress?.({ stage: "weather" });
     const weather = await this.dependencies.weather.resolve(input);
+    onProgress?.({ stage: "catalog" });
     const models = await this.dependencies.catalog.list({
       includeExpensive: true,
     });
     const modelById = new Map(models.map((model) => [model.id, model]));
     const candidateOutputs = await Promise.all(
       input.candidateModelIds.map((modelId) =>
-        this.generateCandidate(modelId, input, weather, modelById.get(modelId)),
+        this.generateCandidate(
+          modelId,
+          input,
+          weather,
+          modelById.get(modelId),
+          onProgress,
+        ),
       ),
     );
     const successful = candidateOutputs.filter(
@@ -132,11 +160,17 @@ export class GenerationPipeline {
         status: "failed",
         errorMessage: "Fewer than two candidate models generated lyrics.",
       };
+      onProgress?.({ stage: "saving" });
       await this.dependencies.history.save(failed);
       return failed;
     }
 
     try {
+      onProgress?.({
+        stage: "judge",
+        judgeModelId,
+        candidateModelIds: successful.map((output) => output.modelId),
+      });
       const evaluations = await this.judge(
         input,
         weather,
@@ -149,6 +183,7 @@ export class GenerationPipeline {
           evaluation,
         ]),
       );
+      onProgress?.({ stage: "ranking" });
       const rankings = rankCandidateOutputs(
         successful.map((output) => ({
           candidateOutputId: output.id,
@@ -168,6 +203,7 @@ export class GenerationPipeline {
         judgeEvaluations: evaluations,
         rankings,
       };
+      onProgress?.({ stage: "saving" });
       await this.dependencies.history.save(completed);
       return completed;
     } catch (error) {
@@ -177,6 +213,7 @@ export class GenerationPipeline {
         errorMessage:
           error instanceof Error ? error.message : "Judge evaluation failed.",
       };
+      onProgress?.({ stage: "saving" });
       await this.dependencies.history.save(failed);
       return failed;
     }
@@ -215,15 +252,17 @@ export class GenerationPipeline {
     input: CreateRunInput,
     weather: WeatherSummary,
     model: ModelCatalogEntry | undefined,
+    onProgress?: (progress: GenerationProgress) => void,
   ): Promise<CandidateOutput> {
     const start = performance.now();
     const id = nextId(this.dependencies.createId);
+    onProgress?.({ stage: "candidate_started", modelId });
     try {
       const response = await this.dependencies.chat.complete(
         modelId,
         buildCandidateLyricsPrompt(input, weather),
       );
-      return {
+      const output: CandidateOutput = {
         id,
         modelId,
         status: "succeeded",
@@ -232,10 +271,12 @@ export class GenerationPipeline {
         estimatedCostUsd: estimateCost(response.usage, model),
         errorMessage: null,
       };
+      onProgress?.({ stage: "candidate_finished", modelId, succeeded: true });
+      return output;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Generation failed.";
-      return {
+      const output: CandidateOutput = {
         id,
         modelId,
         status: message.includes("timed out") ? "timed_out" : "failed",
@@ -244,6 +285,8 @@ export class GenerationPipeline {
         estimatedCostUsd: null,
         errorMessage: message,
       };
+      onProgress?.({ stage: "candidate_finished", modelId, succeeded: false });
+      return output;
     }
   }
 

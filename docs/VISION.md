@@ -45,6 +45,9 @@ evaluation loop:
 6. The final result reveals model names, ranked lyrics, scores, estimated costs,
    response times, and the top-rated output after evaluation is complete.
 7. The app saves the run so it can be reopened from the UI later.
+8. While a run is in progress, the app shows live status messages for weather
+   lookup, each selected model, blind judging, ranking, and saving. Model names
+   can be shown to the user, but never enter the blind judge request.
 
 ## Input Controls
 
