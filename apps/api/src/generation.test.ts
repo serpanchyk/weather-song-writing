@@ -48,6 +48,19 @@ test("uses GPT-5.6 Luna Pro as the default judge", () => {
   assert.equal(DEFAULT_JUDGE_MODEL_ID, "openai/gpt-5.6-luna-pro");
 });
 
+test("creates run IDs with the Worker crypto method context intact", async () => {
+  const saved: unknown[] = [];
+  const run = await new GenerationPipeline({
+    weather: { resolve: async () => weather },
+    catalog: { list: async () => models },
+    chat: client(),
+    history: { save: async (value) => void saved.push(value) },
+  }).create(input);
+
+  assert.match(run.id, /^[0-9a-f-]{36}$/i);
+  assert.equal(saved[0], run);
+});
+
 test("persists and ranks a completed generated run", async () => {
   const saved: unknown[] = [];
   const run = await pipeline(client(), saved).create(input);

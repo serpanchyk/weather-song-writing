@@ -192,7 +192,7 @@ export class GenerationPipeline {
       this.dependencies.now ?? (() => new Date())
     )().toISOString();
     return {
-      id: (this.dependencies.createId ?? crypto.randomUUID)(),
+      id: nextId(this.dependencies.createId),
       status: "failed",
       createdAt: timestamp,
       completedAt: timestamp,
@@ -217,7 +217,7 @@ export class GenerationPipeline {
     model: ModelCatalogEntry | undefined,
   ): Promise<CandidateOutput> {
     const start = performance.now();
-    const id = (this.dependencies.createId ?? crypto.randomUUID)();
+    const id = nextId(this.dependencies.createId);
     try {
       const response = await this.dependencies.chat.complete(
         modelId,
@@ -281,6 +281,10 @@ function estimateCost(
       usage.completionTokens * model.pricing.completionUsdPerMillionTokens) /
     1_000_000
   );
+}
+
+function nextId(createId: (() => string) | undefined): string {
+  return createId === undefined ? crypto.randomUUID() : createId();
 }
 
 function parseCompletion(value: unknown): CompletionResult {
