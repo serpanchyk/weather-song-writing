@@ -132,7 +132,8 @@ function readHourly(
     !Array.isArray(response.hourly.time)
   )
     throw new WeatherServiceError("Weather service returned incomplete data.");
-  const index = response.hourly.time.indexOf(localDateTime);
+  const hourlyTimestamp = `${localDateTime.slice(0, 13)}:00`;
+  const index = response.hourly.time.indexOf(hourlyTimestamp);
   if (index === -1)
     throw new WeatherServiceError(
       "Weather service returned no data for the selected time.",

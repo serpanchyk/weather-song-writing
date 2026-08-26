@@ -34,7 +34,7 @@ test("resolves a city and normalizes forecast weather", async () => {
       : Response.json({
           timezone: "Europe/Kyiv",
           hourly: {
-            time: ["2026-08-25T18:30"],
+            time: ["2026-08-25T18:00"],
             temperature_2m: [19],
             apparent_temperature: [18],
             precipitation: [0.2],
@@ -56,7 +56,7 @@ test("accepts coordinates directly and uses archive weather", async () => {
     Response.json({
       timezone: "Europe/Kyiv",
       hourly: {
-        time: ["2026-08-24T18:30"],
+        time: ["2026-08-24T18:00"],
         temperature_2m: [19],
         apparent_temperature: [18],
         precipitation: [0],

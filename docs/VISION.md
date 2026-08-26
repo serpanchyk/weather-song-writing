@@ -49,6 +49,8 @@ evaluation loop:
 ## Input Controls
 
 - Location should support city input and coordinates.
+- Weather conditions should use the local hourly weather record containing the
+  selected minute-level time.
 - Genre, language, lyrics structure, and mood should be dropdowns, not free-text
   fields.
 - Initial genre options can include pop, rock, indie, rap, jazz, folk, and
