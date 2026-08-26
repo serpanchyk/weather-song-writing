@@ -74,3 +74,11 @@ will be introduced when it is needed.
 
   For a local Worker database, omit `--remote`. The Worker expects this binding
   before calling either history endpoint.
+
+# Run and deploy
+
+Install Node 20+, then run `npm ci`, `npm run dev`, `npm test`, and `npm run build`.
+
+Manual production setup (not performed by this repository): create a Cloudflare D1 database, apply `infra/d1/migrations/0001_run_history.sql` with Wrangler, add its binding as `RUNS_DB` in `apps/api/wrangler.toml`, and set `OPENROUTER_API_KEY` as a Worker secret. Set `FRONTEND_ORIGIN` to the GitHub Pages URL and `VITE_API_BASE_URL` to the deployed Worker URL. Deploy the static `apps/web/dist` directory to GitHub Pages and the Worker with Wrangler only after these values are configured.
+
+Smoke-check `GET /api/v1/health`, load the catalog, submit a two-model run, verify history reopening, and confirm browser source contains no OpenRouter key.

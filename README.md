@@ -67,6 +67,8 @@ blind evaluation -> scored winner persisted -> run returned to frontend.
 
 ## Current State
 
-The shared contracts, Worker API skeleton, D1 run-history persistence, and
-server-side OpenRouter text-model catalog are implemented. Open-Meteo,
-generation, frontend flow, CI, and deployment configuration are still pending.
+The shared contracts, Worker API skeleton, D1 run-history persistence,
+server-side OpenRouter text-model catalog, and Open-Meteo weather resolution
+are implemented. Deterministic candidate and blind-judge prompt construction,
+generation, blind evaluation, scoring, and run persistence are also implemented.
+Frontend flow, CI, and deployment configuration are still pending.

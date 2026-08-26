@@ -53,9 +53,11 @@ The Worker exposes a versioned JSON API at `/api/v1`:
 - `GET /runs` for cursor-paginated global history and `GET /runs/:id` for a
   saved run detail
 
-The health and history read routes are active. Model catalog and run creation
-remain structured `501` placeholders; invalid run input returns a structured
-`400` validation response before the generation pipeline is added.
+The health, model catalog, and history read routes are active. Run creation
+remains a structured `501` placeholder; invalid run input returns a structured
+`400` validation response before the generation pipeline is added. Open-Meteo
+resolution is implemented as a Worker adapter and will be invoked by run
+creation once the generation pipeline is added.
 
 ## Data Sources
 

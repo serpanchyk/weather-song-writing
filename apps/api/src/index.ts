@@ -9,6 +9,12 @@ import {
   RunHistoryRepository,
 } from "./run-history.js";
 import { ModelCatalogError, OpenRouterModelCatalog } from "./model-catalog.js";
+import { GenerationPipeline, OpenRouterChatClient } from "./generation.js";
+import {
+  OpenMeteoWeatherResolver,
+  WeatherServiceError,
+  WeatherValidationError,
+} from "./weather.js";
 
 export interface Env {
   /** Set as a Worker secret before OpenRouter integration is enabled. */
@@ -88,9 +94,7 @@ export async function handleRequest(
     if (request.method === "GET") {
       return listRuns(request, env, url);
     }
-    if (request.method === "POST") {
-      return createRunPlaceholder(request, env);
-    }
+    if (request.method === "POST") return createRun(request, env);
     return methodNotAllowed(request, env, ["GET", "POST", "OPTIONS"]);
   }
 
@@ -103,11 +107,18 @@ export async function handleRequest(
   return errorResponse(request, env, 404, "not_found", "Route not found.");
 }
 
-async function listModels(request: Request, env: Env, url: URL): Promise<Response> {
+async function listModels(
+  request: Request,
+  env: Env,
+  url: URL,
+): Promise<Response> {
   const includeExpensive = url.searchParams.get("includeExpensive") === "true";
   try {
     return jsonResponse(request, env, {
-      models: await new OpenRouterModelCatalog(env.OPENROUTER_API_KEY, env.fetcher).list({
+      models: await new OpenRouterModelCatalog(
+        env.OPENROUTER_API_KEY,
+        env.fetcher,
+      ).list({
         search: url.searchParams.get("search") ?? undefined,
         provider: url.searchParams.get("provider") ?? undefined,
         includeExpensive,
@@ -200,10 +211,7 @@ export default {
   fetch: handleRequest,
 } satisfies ExportedHandler<Env>;
 
-async function createRunPlaceholder(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function createRun(request: Request, env: Env): Promise<Response> {
   let input: unknown;
   try {
     input = await request.json();
@@ -230,17 +238,41 @@ async function createRunPlaceholder(
     );
   }
 
-  return notImplemented(request, env);
-}
-
-function notImplemented(request: Request, env: Env): Response {
-  return errorResponse(
-    request,
-    env,
-    501,
-    "not_implemented",
-    "This endpoint is not implemented yet.",
-  );
+  try {
+    const run = await new GenerationPipeline({
+      weather: new OpenMeteoWeatherResolver(env.fetcher),
+      catalog: new OpenRouterModelCatalog(env.OPENROUTER_API_KEY, env.fetcher),
+      chat: new OpenRouterChatClient(env.OPENROUTER_API_KEY, env.fetcher),
+      history: new RunHistoryRepository(env.RUNS_DB),
+    }).create(validation.value);
+    return jsonResponse(request, env, run, 201);
+  } catch (error) {
+    if (error instanceof WeatherValidationError) {
+      return errorResponse(
+        request,
+        env,
+        400,
+        "validation_error",
+        error.message,
+      );
+    }
+    if (
+      error instanceof WeatherServiceError ||
+      error instanceof ModelCatalogError
+    ) {
+      return errorResponse(request, env, 502, "upstream_error", error.message);
+    }
+    console.error(
+      JSON.stringify({ event: "generation_error", error: String(error) }),
+    );
+    return errorResponse(
+      request,
+      env,
+      500,
+      "storage_error",
+      "Generation could not be saved.",
+    );
+  }
 }
 
 function methodNotAllowed(
