@@ -19,6 +19,20 @@ const models = [
 ];
 const fetcher: typeof fetch = async () => Response.json({ data: models });
 
+test("loads the public catalog without forwarding the generation secret", async () => {
+  let authorization: string | null = null;
+  const catalog = await new OpenRouterModelCatalog(
+    "secret-with-a-newline\n",
+    async (_input, init) => {
+      authorization = new Headers(init?.headers).get("Authorization");
+      return Response.json({ data: models });
+    },
+  ).list();
+
+  assert.equal(authorization, null);
+  assert.equal(catalog.length, 2);
+});
+
 test("filters catalog to text models and exposes pricing states", async () => {
   const catalog = await new OpenRouterModelCatalog("key", fetcher).list();
   assert.deepEqual(

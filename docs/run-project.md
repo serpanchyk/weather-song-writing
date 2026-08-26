@@ -24,8 +24,8 @@ npm run dev
 - Frontend: <http://localhost:5173>
 - Worker health response: <http://localhost:8787/api/v1/health>
 
-`OPENROUTER_API_KEY` is documented now for the forthcoming OpenRouter
-integration. The foundation health endpoint does not require it.
+`OPENROUTER_API_KEY` is required for lyric generation and blind judging. The
+public model catalog and health endpoint do not require it.
 
 The Worker accepts browser requests from `http://localhost:5173` and
 `http://127.0.0.1:5173` while `FRONTEND_ORIGIN` is unset. Local

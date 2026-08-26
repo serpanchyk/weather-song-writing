@@ -26,7 +26,9 @@ export class ModelCatalogError extends Error {}
 
 export class OpenRouterModelCatalog {
   constructor(
-    private readonly apiKey: string,
+    // Kept in the constructor because generation and catalog clients share
+    // configuration, but OpenRouter's model catalog is public.
+    _apiKey: string,
     private readonly fetcher: typeof fetch = fetch,
   ) {}
 
@@ -39,9 +41,7 @@ export class OpenRouterModelCatalog {
   ): Promise<ModelCatalogEntry[]> {
     let response: Response;
     try {
-      response = await this.fetcher(OPENROUTER_MODELS_URL, {
-        headers: { Authorization: `Bearer ${this.apiKey}` },
-      });
+      response = await this.fetcher(OPENROUTER_MODELS_URL);
     } catch {
       throw new ModelCatalogError(
         "OpenRouter model catalog is temporarily unavailable.",
