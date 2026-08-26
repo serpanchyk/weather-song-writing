@@ -29,7 +29,7 @@ export class OpenRouterModelCatalog {
     // Kept in the constructor because generation and catalog clients share
     // configuration, but OpenRouter's model catalog is public.
     _apiKey: string,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
   ) {}
 
   async list(

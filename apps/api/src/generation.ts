@@ -45,7 +45,7 @@ export interface CompletionClient {
 export class OpenRouterChatClient implements CompletionClient {
   constructor(
     private readonly apiKey: string,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly timeoutMs = 45_000,
   ) {}
 

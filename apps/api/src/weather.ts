@@ -15,7 +15,7 @@ export class WeatherServiceError extends Error {}
 
 export class OpenMeteoWeatherResolver {
   constructor(
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly now: () => Date = () => new Date(),
   ) {}
 

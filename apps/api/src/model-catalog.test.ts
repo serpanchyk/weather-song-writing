@@ -19,6 +19,28 @@ const models = [
 ];
 const fetcher: typeof fetch = async () => Response.json({ data: models });
 
+test("binds the Worker fetch function to the global runtime", async () => {
+  const originalFetch = globalThis.fetch;
+  let receiver: unknown;
+  Object.defineProperty(globalThis, "fetch", {
+    configurable: true,
+    value: async function (this: unknown) {
+      receiver = this;
+      return Response.json({ data: models });
+    },
+  });
+  try {
+    await new OpenRouterModelCatalog("key").list();
+  } finally {
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: originalFetch,
+    });
+  }
+
+  assert.equal(receiver, globalThis);
+});
+
 test("loads the public catalog without forwarding the generation secret", async () => {
   let authorization: string | null = null;
   const catalog = await new OpenRouterModelCatalog(
