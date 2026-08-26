@@ -426,6 +426,7 @@ function parseScores(value: Record<string, unknown>): JudgeScores | null {
   const score = (key: string) =>
     isRecord(value[key]) &&
     finiteNumber(value[key].score) !== null &&
+    Number.isInteger(finiteNumber(value[key].score)) &&
     finiteNumber(value[key].score)! >= 0 &&
     finiteNumber(value[key].score)! <= 10 &&
     typeof value[key].reasoning === "string" &&
