@@ -295,9 +295,8 @@ function streamRun(
   };
   void (async () => {
     try {
-      const run = await pipeline.create(
-        input,
-        (progress) => void send("progress", progress),
+      const run = await pipeline.create(input, (progress) =>
+        send("progress", progress),
       );
       await send("complete", run);
     } catch (error) {

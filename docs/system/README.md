@@ -35,12 +35,13 @@ The future Worker should own all external API calls and secrets:
 - expose available OpenRouter models for candidate and judge selection
 - build one structured prompt from weather data
 - call selected OpenRouter models
-- blind-shuffle candidates before judge evaluation and omit model identities from
-  the judge prompt
-- include weather summary, genre, language, lyrics structure, mood, and anonymous
-  candidate outputs in the judge prompt
+- evaluate each successful candidate as soon as it is generated and omit its
+  model identity from the judge prompt
+- include weather summary, genre, language, lyrics structure, mood, and one
+  anonymous candidate output in each judge prompt
 - exclude model names, pricing, and response times from the judge prompt
-- compute weighted scores and return the winning result
+- emit live comparison updates, compute provisional weighted scores, and return
+  the final persisted result
 - save completed runs and expose previous runs to the frontend
 
 ## Initial API Surface

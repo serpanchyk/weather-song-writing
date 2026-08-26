@@ -39,15 +39,14 @@ evaluation loop:
 2. The app resolves weather conditions for that moment.
 3. Each selected model receives the same lyrics prompt, including the selected
    weather input, genre, language, lyrics structure, and mood.
-4. The app keeps candidate outputs anonymous during judge evaluation.
-5. A judge model scores each candidate output across several evaluation
-   dimensions.
-6. The final result reveals model names, ranked lyrics, scores, estimated costs,
+4. The app keeps each candidate output anonymous during its judge evaluation.
+5. A judge model scores each successful candidate as soon as it is generated,
+   across several evaluation dimensions.
+6. The comparison view reveals live lyrics, estimates, provisional ranks, and
+   one concise current-activity message while the run is still in progress.
+7. The final result reveals model names, ranked lyrics, scores, estimated costs,
    response times, and the top-rated output after evaluation is complete.
-7. The app saves the run so it can be reopened from the UI later.
-8. While a run is in progress, the app shows live status messages for weather
-   lookup, each selected model, blind judging, ranking, and saving. Model names
-   can be shown to the user, but never enter the blind judge request.
+8. The app saves the run so it can be reopened from the UI later.
 
 ## Input Controls
 
@@ -112,12 +111,12 @@ help distinguish outputs with similar judge scores.
 
 ## Failure Handling
 
-- If at least two candidate models succeed, the app should save and rank the
-  partial run.
-- Failed or timed-out candidate models should appear in the result table with an
-  error status and be excluded from ranking.
-- If fewer than two candidate models succeed, the app should mark the run failed
-  and skip judge evaluation.
+- Every successful candidate should be evaluated and ranked as soon as its judge
+  score is available, including when it is the only successful candidate.
+- Failed or timed-out candidate models should appear in the comparison view with
+  a clear error status and be excluded from ranking.
+- A run fails only when no generated lyric can be evaluated; otherwise it saves
+  as completed or partial.
 
 ## Weather Date Handling
 

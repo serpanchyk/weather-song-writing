@@ -63,6 +63,8 @@ test("judge prompt maps anonymous outputs while omitting identities and metadata
     { label: "Candidate B", candidateOutputId: "output-b" },
   ]);
   assert.match(serialized, /Candidate A/);
+  assert.match(serialized, /0 = entirely absent or contradictory/);
+  assert.match(serialized, /10 = exceptional and fully satisfies the brief/);
   assert.doesNotMatch(serialized, /private-model|900|1\.3|0\.02/);
   assert.equal(
     JUDGE_RESPONSE_JSON_SCHEMA.schema.properties.evaluations.items.properties

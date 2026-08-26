@@ -107,7 +107,7 @@ export function buildBlindJudgePrompt(
       },
       {
         role: "user",
-        content: `${creativeBrief(input, weather)}\n\nEvaluate these anonymous candidates from 0 to 10 for instruction following, lyrical quality, creativity, and weather relevance. Give concise reasoning for every score.\n\n${outputText}`,
+        content: `${creativeBrief(input, weather)}\n\nEvaluate this anonymous candidate from 0 to 10 for each criterion. Use these anchors: 0 = entirely absent or contradictory; 2 = severely inadequate; 4 = weak and inconsistent; 6 = competent but uneven; 8 = strong and clearly effective; 10 = exceptional and fully satisfies the brief.\n- Instruction following: obeys genre, language, structure, mood, and lyrics-only constraints.\n- Lyrical quality: imagery, flow, coherence, and singable phrasing.\n- Creativity: original, specific writing rather than generic phrases.\n- Weather relevance: weather details are meaningfully woven into the lyrics.\nGive concise evidence-based reasoning for every score.\n\n${outputText}`,
       },
     ],
     candidates,

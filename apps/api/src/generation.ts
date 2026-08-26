@@ -2,6 +2,7 @@ import {
   rankCandidateOutputs,
   type CandidateJudgeEvaluation,
   type CandidateOutput,
+  type CandidateRanking,
   type CreateRunInput,
   type GenerationRun,
   type JudgeScores,
@@ -48,16 +49,30 @@ export type GenerationProgress =
   | { readonly stage: "candidate_started"; readonly modelId: string }
   | {
       readonly stage: "candidate_finished";
-      readonly modelId: string;
-      readonly succeeded: boolean;
+      readonly output: CandidateOutput;
     }
   | {
-      readonly stage: "judge";
+      readonly stage: "judge_started";
       readonly judgeModelId: string;
-      readonly candidateModelIds: readonly string[];
+      readonly modelId: string;
     }
-  | { readonly stage: "ranking" }
+  | {
+      readonly stage: "judge_finished";
+      readonly modelId: string;
+      readonly evaluation: CandidateJudgeEvaluation;
+    }
+  | {
+      readonly stage: "judge_failed";
+      readonly modelId: string;
+      readonly message: string;
+    }
+  | {
+      readonly stage: "ranking";
+      readonly rankings: readonly CandidateRanking[];
+    }
   | { readonly stage: "saving" };
+
+type ProgressCallback = (progress: GenerationProgress) => void | Promise<void>;
 
 export class OpenRouterChatClient implements CompletionClient {
   constructor(
@@ -96,7 +111,7 @@ export class OpenRouterChatClient implements CompletionClient {
       });
       if (!response.ok) {
         throw new GenerationServiceError(
-          `OpenRouter request failed (${response.status}).`,
+          userFacingOpenRouterError(response.status),
         );
       }
       return parseCompletion(await response.json());
@@ -114,6 +129,16 @@ export class OpenRouterChatClient implements CompletionClient {
   }
 }
 
+function userFacingOpenRouterError(status: number): string {
+  if (status === 401 || status === 403)
+    return "The model provider rejected this request. Check that the selected model is available to this API key.";
+  if (status === 429)
+    return "The model provider is rate-limiting requests. Please try this model again shortly.";
+  if (status >= 500)
+    return "The model provider is temporarily unavailable. Please try again later or choose another model.";
+  return "The model provider could not process this request.";
+}
+
 export class GenerationPipeline {
   constructor(
     private readonly dependencies: {
@@ -128,95 +153,58 @@ export class GenerationPipeline {
 
   async create(
     input: CreateRunInput,
-    onProgress?: (progress: GenerationProgress) => void,
+    onProgress?: ProgressCallback,
   ): Promise<GenerationRun> {
-    onProgress?.({ stage: "weather" });
+    await onProgress?.({ stage: "weather" });
     const weather = await this.dependencies.weather.resolve(input);
-    onProgress?.({ stage: "catalog" });
+    await onProgress?.({ stage: "catalog" });
     const models = await this.dependencies.catalog.list({
       includeExpensive: true,
     });
     const modelById = new Map(models.map((model) => [model.id, model]));
+    const judgeModelId = input.judgeModelId ?? DEFAULT_JUDGE_MODEL_ID;
+    const evaluations = new Map<string, CandidateJudgeEvaluation>();
+    const generatedOutputs: CandidateOutput[] = [];
+    let rankings: readonly CandidateRanking[] = [];
     const candidateOutputs = await Promise.all(
       input.candidateModelIds.map((modelId) =>
-        this.generateCandidate(
+        this.generateAndJudgeCandidate(
           modelId,
           input,
           weather,
           modelById.get(modelId),
+          judgeModelId,
+          evaluations,
+          generatedOutputs,
           onProgress,
         ),
       ),
     );
+    const base = this.newRun(input, weather, candidateOutputs, judgeModelId);
     const successful = candidateOutputs.filter(
       (output) => output.status === "succeeded",
     );
-    const judgeModelId = input.judgeModelId ?? DEFAULT_JUDGE_MODEL_ID;
-    const base = this.newRun(input, weather, candidateOutputs, judgeModelId);
-
-    if (successful.length < 2) {
-      const failed: GenerationRun = {
-        ...base,
-        status: "failed",
-        errorMessage: "Fewer than two candidate models generated lyrics.",
-      };
-      onProgress?.({ stage: "saving" });
-      await this.dependencies.history.save(failed);
-      return failed;
-    }
-
-    try {
-      onProgress?.({
-        stage: "judge",
-        judgeModelId,
-        candidateModelIds: successful.map((output) => output.modelId),
-      });
-      const evaluations = await this.judge(
-        input,
-        weather,
-        candidateOutputs,
-        judgeModelId,
-      );
-      const evaluationById = new Map(
-        evaluations.map((evaluation) => [
-          evaluation.candidateOutputId,
-          evaluation,
-        ]),
-      );
-      onProgress?.({ stage: "ranking" });
-      const rankings = rankCandidateOutputs(
-        successful.map((output) => ({
-          candidateOutputId: output.id,
-          scores: evaluationById.get(output.id)!.scores,
-          estimatedCostUsd: output.estimatedCostUsd,
-          responseTimeMs: output.responseTimeMs,
-        })),
-      );
-      const top = rankings.find((ranking) => ranking.rank === 1) ?? null;
-      const completed: GenerationRun = {
-        ...base,
-        status:
-          successful.length === candidateOutputs.length
+    const judged = [...evaluations.values()];
+    rankings = this.rank(candidateOutputs, evaluations);
+    const top = rankings.find((ranking) => ranking.rank === 1) ?? null;
+    const completed: GenerationRun = {
+      ...base,
+      status:
+        judged.length === 0
+          ? "failed"
+          : successful.length === candidateOutputs.length &&
+              judged.length === successful.length
             ? "completed"
             : "partial",
-        topCandidateOutputId: top?.candidateOutputId ?? null,
-        judgeEvaluations: evaluations,
-        rankings,
-      };
-      onProgress?.({ stage: "saving" });
-      await this.dependencies.history.save(completed);
-      return completed;
-    } catch (error) {
-      const failed: GenerationRun = {
-        ...base,
-        status: "failed",
-        errorMessage:
-          error instanceof Error ? error.message : "Judge evaluation failed.",
-      };
-      onProgress?.({ stage: "saving" });
-      await this.dependencies.history.save(failed);
-      return failed;
-    }
+      topCandidateOutputId: top?.candidateOutputId ?? null,
+      judgeEvaluations: judged,
+      rankings,
+      errorMessage:
+        judged.length === 0 ? "No generated lyrics could be evaluated." : null,
+    };
+    await onProgress?.({ stage: "saving" });
+    await this.dependencies.history.save(completed);
+    return completed;
   }
 
   private newRun(
@@ -247,16 +235,19 @@ export class GenerationPipeline {
     };
   }
 
-  private async generateCandidate(
+  private async generateAndJudgeCandidate(
     modelId: string,
     input: CreateRunInput,
     weather: WeatherSummary,
     model: ModelCatalogEntry | undefined,
-    onProgress?: (progress: GenerationProgress) => void,
+    judgeModelId: string,
+    evaluations: Map<string, CandidateJudgeEvaluation>,
+    generatedOutputs: CandidateOutput[],
+    onProgress?: ProgressCallback,
   ): Promise<CandidateOutput> {
     const start = performance.now();
     const id = nextId(this.dependencies.createId);
-    onProgress?.({ stage: "candidate_started", modelId });
+    await onProgress?.({ stage: "candidate_started", modelId });
     try {
       const response = await this.dependencies.chat.complete(
         modelId,
@@ -271,7 +262,36 @@ export class GenerationPipeline {
         estimatedCostUsd: estimateCost(response.usage, model),
         errorMessage: null,
       };
-      onProgress?.({ stage: "candidate_finished", modelId, succeeded: true });
+      generatedOutputs.push(output);
+      await onProgress?.({ stage: "candidate_finished", output });
+      await onProgress?.({ stage: "judge_started", judgeModelId, modelId });
+      try {
+        const evaluation = await this.judge(
+          input,
+          weather,
+          [output],
+          judgeModelId,
+        );
+        evaluations.set(output.id, evaluation[0]!);
+        await onProgress?.({
+          stage: "judge_finished",
+          modelId,
+          evaluation: evaluation[0]!,
+        });
+        await onProgress?.({
+          stage: "ranking",
+          rankings: this.rank(generatedOutputs, evaluations),
+        });
+      } catch (error) {
+        await onProgress?.({
+          stage: "judge_failed",
+          modelId,
+          message:
+            error instanceof Error
+              ? error.message
+              : "The judge could not evaluate these lyrics.",
+        });
+      }
       return output;
     } catch (error) {
       const message =
@@ -285,9 +305,29 @@ export class GenerationPipeline {
         estimatedCostUsd: null,
         errorMessage: message,
       };
-      onProgress?.({ stage: "candidate_finished", modelId, succeeded: false });
+      generatedOutputs.push(output);
+      await onProgress?.({ stage: "candidate_finished", output });
       return output;
     }
+  }
+
+  private rank(
+    outputs: readonly CandidateOutput[],
+    evaluations: ReadonlyMap<string, CandidateJudgeEvaluation>,
+  ): readonly CandidateRanking[] {
+    return rankCandidateOutputs(
+      outputs
+        .filter(
+          (output) =>
+            output.status === "succeeded" && evaluations.has(output.id),
+        )
+        .map((output) => ({
+          candidateOutputId: output.id,
+          scores: evaluations.get(output.id)!.scores,
+          estimatedCostUsd: output.estimatedCostUsd,
+          responseTimeMs: output.responseTimeMs,
+        })),
+    );
   }
 
   private async judge(

@@ -74,21 +74,48 @@ test("persists and ranks a completed generated run", async () => {
   assert.equal(saved[0], run);
 });
 
-test("reports live stages without exposing candidate identities to the judge", async () => {
+test("judges each generated candidate immediately and reports live stages", async () => {
   const saved: unknown[] = [];
   const progress: unknown[] = [];
-  await pipeline(client(), saved).create(input, (stage) =>
-    progress.push(stage),
-  );
+  await pipeline(client(), saved).create(input, (stage) => {
+    progress.push(stage);
+  });
 
   assert.deepEqual(progress[0], { stage: "weather" });
   assert.deepEqual(progress[1], { stage: "catalog" });
-  assert.deepEqual(progress.at(-3), {
-    stage: "judge",
-    judgeModelId: "acme/judge",
-    candidateModelIds: ["acme/a", "acme/b", "acme/c"],
-  });
-  assert.deepEqual(progress.at(-2), { stage: "ranking" });
+  assert.deepEqual(
+    progress.find(
+      (stage) =>
+        typeof stage === "object" &&
+        stage !== null &&
+        "stage" in stage &&
+        stage.stage === "candidate_finished",
+    ),
+    {
+      stage: "candidate_finished",
+      output: {
+        id: "id-1",
+        modelId: "acme/a",
+        status: "succeeded",
+        lyrics: "acme/a lyrics",
+        responseTimeMs: 1,
+        estimatedCostUsd: 0.0002,
+        errorMessage: null,
+      },
+    },
+  );
+  assert.equal(
+    (
+      progress.filter(
+        (stage) =>
+          typeof stage === "object" &&
+          stage !== null &&
+          "stage" in stage &&
+          stage.stage === "judge_started",
+      ) as unknown[]
+    ).length,
+    3,
+  );
   assert.deepEqual(progress.at(-1), { stage: "saving" });
 });
 
@@ -105,15 +132,15 @@ test("persists a partial run and excludes a failed candidate from ranking", asyn
   assert.equal(saved[0], run);
 });
 
-test("persists a failed run without calling the judge when fewer than two candidates succeed", async () => {
+test("evaluates and saves a run with one successful candidate", async () => {
   const saved: unknown[] = [];
   const chat = client(new Set(["acme/b", "acme/c"]));
   const run = await pipeline(chat, saved).create(input);
-  assert.equal(run.status, "failed");
-  assert.equal(run.judgeEvaluations.length, 0);
+  assert.equal(run.status, "partial");
+  assert.equal(run.judgeEvaluations.length, 1);
   assert.equal(
     chat.calls.filter((call) => call.modelId === "acme/judge").length,
-    0,
+    1,
   );
   assert.equal(saved[0], run);
 });

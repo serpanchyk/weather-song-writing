@@ -21,16 +21,6 @@ build/
 !.env.example
 !.env.*.example
 
-# Python and uv leftovers
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
 # Logs
 *.log
 npm-debug.log*
