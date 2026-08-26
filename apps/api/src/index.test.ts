@@ -55,7 +55,10 @@ test("exposes the text-capable OpenRouter model catalog", async () => {
         provider: "acme",
         contextLength: null,
         supportedModalities: ["text"],
-        pricing: { promptUsdPerMillionTokens: 1, completionUsdPerMillionTokens: 2 },
+        pricing: {
+          promptUsdPerMillionTokens: 1,
+          completionUsdPerMillionTokens: 2,
+        },
         pricingStatus: "available",
       },
     ],
