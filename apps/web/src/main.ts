@@ -35,7 +35,7 @@ function render() {
   bindEvents();
 }
 function generatorView() {
-  return `<section class="generator-page"><div class="intro"><p class="eyebrow">Weather-informed writing</p><h1>Turn a moment in the sky into <span>Lyrics.</span></h1><p>Give several selected models the same Weather Input, then compare their Candidate Outputs through a blind evaluation.</p><div class="cloud-line" aria-hidden="true">☁ <span></span> ✦</div></div><div class="generator-grid"><form id="run-form" class="generator-card"><div class="form-section"><div class="section-title"><span>01</span><div><h2>Weather Moment</h2><p>Choose where and when the writing begins.</p></div></div><div class="location-switch" role="radiogroup" aria-label="Location input"><label><input type="radio" name="locationMode" value="city" checked> City</label><label><input type="radio" name="locationMode" value="coordinates"> Coordinates</label></div><div id="city-fields" class="form-fields"><label>City<input name="city" value="Lviv" autocomplete="address-level2" placeholder="e.g. Lviv"></label><label>Local date & time<input type="datetime-local" name="localDateTime" required></label></div><div id="coordinate-fields" class="form-fields is-hidden"><label>Latitude<input name="latitude" inputmode="decimal" placeholder="49.84"></label><label>Longitude<input name="longitude" inputmode="decimal" placeholder="24.03"></label><label>Local date & time<input type="datetime-local" name="coordinateDateTime" required></label></div></div><div class="form-section"><div class="section-title"><span>02</span><div><h2>Creative direction</h2><p>Set a shared brief for every model.</p></div></div><div class="form-fields creative-grid">${select("genre", "Genre", GENRE_OPTIONS)}${select("language", "Language", LANGUAGE_OPTIONS)}${select("lyricsStructure", "Structure", LYRICS_STRUCTURE_OPTIONS)}${select("mood", "Mood", MOOD_OPTIONS)}</div></div><div class="form-section"><div class="section-title"><span>03</span><div><h2>Selected Models</h2><p>Choose between 2 and 6 models to compare.</p></div></div><div class="model-controls"><label class="search-field"><span>⌕</span><input id="search" placeholder="Search models or providers" autocomplete="off"></label><span id="selection-count" class="selection-count">${selected.size}/6 selected</span></div><p id="catalog" class="catalog-status">Loading model catalog…</p><div id="candidates" class="model-list"></div><div class="selected-area"><div class="selected-heading"><strong>Selected Models</strong><span>Choose at least two</span></div><div id="selected-models" class="selected-models"></div></div><label class="judge-field">Judge model<select name="judgeModelId" id="judge-model"></select></label><p id="judge-warning" class="warning" role="status"></p></div><p id="errors" class="form-error" role="alert"></p><button class="generate-button" type="submit"><span>Generate & compare</span><span aria-hidden="true">→</span></button><p class="form-footnote">Candidate Outputs are judged anonymously. Model names, price, and response time never enter the quality evaluation.</p></form><aside class="recent-card"><div class="section-heading"><div><p class="eyebrow">Global archive</p><h2>Recent comparisons</h2></div><button class="text-button" data-nav="history">View all</button></div>${historyLoading ? loading("Loading saved runs…") : renderHistory(history, true)}</aside></div></section>`;
+  return `<section class="generator-page"><div class="intro"><p class="eyebrow">Weather-informed writing</p><h1>Turn a moment in the sky into <span>Lyrics.</span></h1><p>Give several selected models the same Weather Input, then compare their Candidate Outputs through a blind evaluation.</p><div class="cloud-line" aria-hidden="true">☁ <span></span> ✦</div></div><div class="generator-grid"><form id="run-form" class="generator-card"><div class="form-section"><div class="section-title"><span>01</span><div><h2>Weather Moment</h2><p>Choose where and when the writing begins.</p></div></div><div class="location-switch" role="radiogroup" aria-label="Location input"><label><input type="radio" name="locationMode" value="city" checked> City</label><label><input type="radio" name="locationMode" value="coordinates"> Coordinates</label></div><div id="city-fields" class="form-fields"><label>City<input name="city" value="Lviv" autocomplete="address-level2" placeholder="e.g. Lviv"></label><label>Local date & time<input type="datetime-local" name="localDateTime" required></label></div><div id="coordinate-fields" class="form-fields is-hidden"><label>Latitude<input name="latitude" inputmode="decimal" placeholder="49.84"></label><label>Longitude<input name="longitude" inputmode="decimal" placeholder="24.03"></label><label>Local date & time<input type="datetime-local" name="coordinateDateTime" required></label></div></div><div class="form-section"><div class="section-title"><span>02</span><div><h2>Creative direction</h2><p>Set a shared brief for every model.</p></div></div><div class="form-fields creative-grid">${select("genre", "Genre", GENRE_OPTIONS)}${select("language", "Language", LANGUAGE_OPTIONS)}${select("lyricsStructure", "Structure", LYRICS_STRUCTURE_OPTIONS)}${select("mood", "Mood", MOOD_OPTIONS)}</div></div><div class="form-section"><div class="section-title"><span>03</span><div><h2>Selected Models</h2><p>Choose between 2 and 6 models to compare.</p></div></div><div class="model-controls"><label class="search-field"><span>⌕</span><input id="search" placeholder="Search models or providers" autocomplete="off"></label><span id="selection-count" class="selection-count">${selected.size}/6 selected</span></div><p id="catalog" class="catalog-status">Loading model catalog…</p><div id="candidates" class="model-list"></div><div class="selected-area"><div class="selected-heading"><strong>Selected Models</strong><span>Choose at least two</span></div><div id="selected-models" class="selected-models"></div></div><label class="judge-field">Judge model<select name="judgeModelId" id="judge-model"></select><small class="judge-hint">Choose a capable judge for more reliable quality scores.</small></label><p id="judge-warning" class="warning" role="status"></p></div><p id="errors" class="form-error" role="alert"></p><button class="generate-button" type="submit"><span>Generate & compare</span><span aria-hidden="true">→</span></button><p class="form-footnote">Candidate Outputs are judged anonymously. Model names, price, and response time never enter the quality evaluation.</p></form><aside class="recent-card"><div class="section-heading"><div><p class="eyebrow">Global archive</p><h2>Recent comparisons</h2></div><button class="text-button" data-nav="history">View all</button></div>${historyLoading ? loading("Loading saved runs…") : renderHistory(history, true)}</aside></div></section>`;
 }
 function resultsView() {
   return activeRun === null
@@ -125,13 +125,11 @@ function renderCandidates() {
   }
   const query =
     app.querySelector<HTMLInputElement>("#search")?.value.toLowerCase() ?? "";
-  const matches = models
-    .filter((model) =>
-      `${model.id} ${model.displayName} ${model.provider ?? ""}`
-        .toLowerCase()
-        .includes(query),
-    )
-    .slice(0, 60);
+  const matches = models.filter((model) =>
+    `${model.id} ${model.displayName} ${model.provider ?? ""}`
+      .toLowerCase()
+      .includes(query),
+  );
   catalog.textContent = `${matches.length}${query ? " matching" : " available"} model${matches.length === 1 ? "" : "s"}.`;
   list.innerHTML = matches
     .map(
@@ -288,9 +286,19 @@ function select(
   return `<label>${label}<select name="${name}">${values.map((value) => `<option value="${value.value}">${value.label}</option>`).join("")}</select></label>`;
 }
 function price(model: ModelCatalogEntry) {
-  return model.pricing === null
-    ? "pricing unavailable"
-    : `$${model.pricing.promptUsdPerMillionTokens}/$${model.pricing.completionUsdPerMillionTokens} / 1M`;
+  if (
+    model.pricing === null ||
+    model.pricing.promptUsdPerMillionTokens === null ||
+    model.pricing.completionUsdPerMillionTokens === null
+  )
+    return "pricing unavailable";
+  return `$${formatPrice(model.pricing.promptUsdPerMillionTokens)}/$${formatPrice(model.pricing.completionUsdPerMillionTokens)} / 1M`;
+}
+function formatPrice(value: number) {
+  return (Math.round((value + Number.EPSILON) * 100) / 100).toLocaleString(
+    "en-US",
+    { maximumFractionDigits: 2 },
+  );
 }
 function dateTime() {
   const value = new Date();

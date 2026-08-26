@@ -14,7 +14,7 @@ export {
   LYRICS_STRUCTURE_OPTIONS,
   MOOD_OPTIONS,
 };
-export const DEFAULT_JUDGE_MODEL_ID = "openai/gpt-4.1-mini";
+export const DEFAULT_JUDGE_MODEL_ID = "openai/gpt-5.6-luna-pro";
 export interface FormValues {
   readonly locationMode: "city" | "coordinates";
   readonly city: string;

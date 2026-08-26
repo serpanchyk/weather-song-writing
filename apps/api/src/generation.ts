@@ -20,7 +20,7 @@ import { RunHistoryRepository } from "./run-history.js";
 import { OpenMeteoWeatherResolver } from "./weather.js";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const DEFAULT_JUDGE_MODEL_ID = "openai/gpt-4.1-mini";
+export const DEFAULT_JUDGE_MODEL_ID = "openai/gpt-5.6-luna-pro";
 
 export class GenerationServiceError extends Error {}
 

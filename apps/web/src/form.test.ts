@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateForm } from "./form.js";
+import { DEFAULT_JUDGE_MODEL_ID, validateForm } from "./form.js";
 const valid = {
   locationMode: "city" as const,
   city: "Lviv",
@@ -22,4 +22,8 @@ test("validates location and candidate model count", () => {
     ),
     /city.*unique/i,
   );
+});
+
+test("defaults to GPT-5.6 Luna Pro as the judge", () => {
+  assert.equal(DEFAULT_JUDGE_MODEL_ID, "openai/gpt-5.6-luna-pro");
 });

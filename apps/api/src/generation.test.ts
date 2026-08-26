@@ -6,7 +6,11 @@ import type {
   WeatherSummary,
 } from "@weather-song-writing/contracts";
 
-import { GenerationPipeline, type CompletionClient } from "./generation.js";
+import {
+  DEFAULT_JUDGE_MODEL_ID,
+  GenerationPipeline,
+  type CompletionClient,
+} from "./generation.js";
 
 const input: CreateRunInput = {
   location: { kind: "city", city: "Lviv" },
@@ -39,6 +43,10 @@ const models: ModelCatalogEntry[] = input.candidateModelIds.map((id) => ({
   pricing: { promptUsdPerMillionTokens: 1, completionUsdPerMillionTokens: 2 },
   pricingStatus: "available",
 }));
+
+test("uses GPT-5.6 Luna Pro as the default judge", () => {
+  assert.equal(DEFAULT_JUDGE_MODEL_ID, "openai/gpt-5.6-luna-pro");
+});
 
 test("persists and ranks a completed generated run", async () => {
   const saved: unknown[] = [];

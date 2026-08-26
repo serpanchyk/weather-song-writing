@@ -62,11 +62,12 @@ evaluation loop:
   and romantic.
 - Candidate model and judge model selectors should use the same OpenRouter model
   catalog interface.
-- The judge model selector should default to the recommended judge model while
-  still allowing the user to choose another available model.
+- The judge model selector should default to GPT-5.6 Luna Pro while still
+  allowing the user to choose another available model.
 - Model selectors should expose a searchable OpenRouter catalog filtered to
-  chat/text models by default.
-- The app should show pricing metadata before generation when available.
+  chat/text models by default, without a display-count cap.
+- The app should show clearly rounded pricing metadata before generation when
+  available.
 - The app should warn about very expensive models, models with missing pricing,
   and cases where the judge model is also one of the selected candidate models.
 - The app should prevent duplicate candidate model selections.
